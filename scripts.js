@@ -46,14 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
     filterButtons.forEach(button => {
         button.addEventListener('click', () => {
             const filter = button.getAttribute('data-filter');
-            
+
             // Update active button
             filterButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
 
             // Filter images
-            filteredImages = filter === 'all' 
-                ? galleryImages 
+            filteredImages = filter === 'all'
+                ? galleryImages
                 : galleryImages.filter(img => img.category === filter);
 
             renderGallery(filteredImages);
@@ -107,16 +107,16 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const burger = document.querySelector('.burger');
     const nav = document.querySelector('.nav-links');
-    
+
     burger.addEventListener('click', () => {
         // Toggle navigation
         nav.classList.toggle('active');
         burger.classList.toggle('active');
-        
+
         // Prevent scroll when menu is open
         document.body.style.overflow = nav.classList.contains('active') ? 'hidden' : 'auto';
     });
-    
+
     // Close menu when clicking on a link
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.addEventListener('click', () => {
@@ -126,48 +126,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
-document.getElementById('appointment-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-
-    const name = document.getElementById('name').value;
-    const phone = document.getElementById('phone').value;
-    const service = document.getElementById('service').value;
-    const date = document.getElementById('date').value;
-    const time = document.getElementById('time').value;
-    const message = document.getElementById('message').value;
-
-    const whatsappMessage = `
+function sendWhatsAppNotification(data) {
+    const phoneNumber = '5583993265161'; // Exemplo: 5511987654321
+    const message = `
 📅 *Novo Agendamento Recebido*!
 
-👤 *Nome:* ${name}
-📞 *Telefone:* ${phone}
-✂️ *Serviço:* ${service}
-📆 *Data:* ${date}
-🕒 *Horário:* ${time}
-📝 *Observações:* ${message}
+👤 *Nome:* ${data.name}
+📞 *Telefone:* ${data.phone}
+✂️ *Serviço:* ${data.service}
+📆 *Data:* ${data.date}
+🕒 *Horário:* ${data.time}
+📝 *Observações:* ${data.message}
 `;
 
-    sendWhatsAppNotification(whatsappMessage);
-});
+    const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappURL, '_blank');
+}
+
 function sendWhatsAppNotification(message) {
     const phoneNumber = '5583993265161'; // Exemplo: 55 + DDD + número -> 5511987654321
     const encodedMessage = encodeURIComponent(message);
     const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-    
+
     window.open(whatsappURL, '_blank'); // Abre o link no WhatsApp Web ou App
 }
 
 // Time slots configuration
 const timeSlots = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
-    '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00'
+    '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
 ];
 
 // Populate time slots
 function populateTimeSlots() {
     const timeSelect = document.getElementById('time');
-    
+
     timeSlots.forEach(time => {
         const option = document.createElement('option');
         option.value = time;
@@ -178,3 +170,102 @@ function populateTimeSlots() {
 
 // Initialize time slots when DOM is loaded
 document.addEventListener('DOMContentLoaded', populateTimeSlots);
+
+// Lista de horários disponíveis (pode ser ajustada conforme necessário)
+let horariosDisponiveis = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+
+function atualizarHorarios() {
+    const timeSelect = document.getElementById('time');
+    timeSelect.innerHTML = '<option value="">Selecione</option>';
+
+    horariosDisponiveis.forEach((hora) => {
+        const option = document.createElement('option');
+        option.value = hora;
+        option.textContent = hora;
+        timeSelect.appendChild(option);
+    });
+}
+
+// Remover horário da lista
+function removerHorario(horario) {
+    horariosDisponiveis = horariosDisponiveis.filter((hora) => hora !== horario);
+    atualizarHorarios();
+}
+document.getElementById('appointment-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value;
+    const service = document.getElementById('service').value;
+    const date = document.getElementById('date').value;
+    const time = document.getElementById('time').value;
+    const message = document.getElementById('message').value;
+
+    if (!time) {
+        alert('Por favor, selecione um horário.');
+        return;
+    }
+
+    const agendamento = {
+        name,
+        phone,
+        service,
+        date,
+        time,
+        message
+    };
+
+    console.log('Agendamento realizado:', agendamento);
+    alert('Seu agendamento foi realizado com sucesso!');
+
+    // Remove o horário agendado
+    removerHorario(time);
+
+    // Notificação via WhatsApp
+    sendWhatsAppNotification(agendamento);
+});
+
+
+
+// Carregar horários agendados ao carregar a página
+window.addEventListener('load', () => {
+    fetch('/api/appointments')
+        .then(response => response.json())
+        .then(bookedTimes => {
+            const timeSelect = document.getElementById('time');
+            const options = timeSelect.options;
+
+            for (let i = 0; i < options.length; i++) {
+                if (bookedTimes.includes(options[i].value)) {
+                    options[i].disabled = true;
+                }
+            }
+        })
+        .catch(error => console.error('Erro ao carregar horários:', error));
+});
+
+// Enviar agendamento ao servidor
+document.getElementById('appointment-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const formData = {
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value,
+        service: document.getElementById('service').value,
+        date: document.getElementById('date').value,
+        time: document.getElementById('time').value,
+        message: document.getElementById('message').value
+    };
+
+    fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+        .then(response => response.json())
+        .then(data => {
+            alert('Agendamento realizado com sucesso!');
+            window.location.reload(); // Atualiza para desabilitar o horário agendado
+        })
+        .catch(error => console.error('Erro ao agendar:', error));
+});
